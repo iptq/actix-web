@@ -397,7 +397,7 @@ pub enum MultipartError {
     ParseContentType,
     /// Multipart boundary is not found
     #[fail(display = "Multipart boundary is not found")]
-    Boundary,
+    MissingBoundary,
     /// Multipart stream is incomplete
     #[fail(display = "Multipart stream is incomplete")]
     Incomplete,
@@ -1160,7 +1160,7 @@ mod tests {
         let resp: HttpResponse = CookieParseError::EmptyName.error_response();
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
 
-        let resp: HttpResponse = MultipartError::Boundary.error_response();
+        let resp: HttpResponse = MultipartError::MissingBoundary.error_response();
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
 
         let err: HttpError = StatusCode::from_u16(10000).err().unwrap().into();

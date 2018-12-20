@@ -73,7 +73,7 @@ impl Multipart<()> {
             .parse::<mime::Mime>()
             .map_err(|_| MultipartError::ParseContentType)?
             .get_param(mime::BOUNDARY)
-            .ok_or_else(|| MultipartError::Boundary)?
+            .ok_or_else(|| MultipartError::MissingBoundary)?
             .as_str()
             .to_owned())
     }
@@ -127,6 +127,7 @@ impl<S> InnerMultipart<S>
 where
     S: Stream<Item = Bytes, Error = PayloadError>,
 {
+    /// Read headers from the stream, until `b"\r\n\r\n"` is reached.
     fn read_headers(payload: &mut PayloadBuffer<S>) -> Poll<HeaderMap, MultipartError> {
         match payload.read_until(b"\r\n\r\n")? {
             Async::NotReady => Ok(Async::NotReady),
@@ -177,7 +178,8 @@ where
                 {
                     Ok(Async::Ready(true))
                 } else {
-                    Err(MultipartError::Boundary)
+                    eprintln!("error boundary: {:?}", chunk);
+                    Err(MultipartError::MissingBoundary)
                 }
             }
         }
@@ -296,8 +298,7 @@ where
 
                 // read field headers for next field
                 if self.state == InnerState::Headers {
-                    if let Async::Ready(headers) = InnerMultipart::read_headers(payload)?
-                    {
+                    if let Async::Ready(headers) = InnerMultipart::read_headers(payload)? {
                         self.state = InnerState::Boundary;
                         headers
                     } else {
@@ -333,7 +334,8 @@ where
                         item: InnerMultipartItem::None,
                     }))
                 } else {
-                    return Err(MultipartError::Boundary);
+                    eprintln!("error boundary: {:?}", mt);
+                    return Err(MultipartError::MissingBoundary);
                 };
 
                 self.item = InnerMultipartItem::Multipart(Rc::clone(&inner));
@@ -483,6 +485,7 @@ where
 
     /// Reads body part content chunk of the specified size.
     /// The body part must has `Content-Length` header with proper value.
+    #[allow(dead_code)]
     fn read_len(
         payload: &mut PayloadBuffer<S>, size: &mut u64,
     ) -> Poll<Option<Bytes>, MultipartError> {
@@ -511,38 +514,60 @@ where
     fn read_stream(
         payload: &mut PayloadBuffer<S>, boundary: &str,
     ) -> Poll<Option<Bytes>, MultipartError> {
-        match payload.read_until(b"\r")? {
+        let mut delimiter = b"\r\n--".to_vec();
+        delimiter.extend_from_slice(boundary.as_bytes());
+
+        match payload.read_until(&delimiter)? {
             Async::NotReady => Ok(Async::NotReady),
             Async::Ready(None) => Err(MultipartError::Incomplete),
             Async::Ready(Some(mut chunk)) => {
-                if chunk.len() == 1 {
-                    payload.unprocessed(chunk);
-                    match payload.read_exact(boundary.len() + 4)? {
-                        Async::NotReady => Ok(Async::NotReady),
-                        Async::Ready(None) => Err(MultipartError::Incomplete),
-                        Async::Ready(Some(mut chunk)) => {
-                            if &chunk[..2] == b"\r\n"
-                                && &chunk[2..4] == b"--"
-                                && &chunk[4..] == boundary.as_bytes()
-                            {
-                                payload.unprocessed(chunk);
-                                Ok(Async::Ready(None))
-                            } else {
-                                // \r might be part of data stream
-                                let ch = chunk.split_to(1);
-                                payload.unprocessed(chunk);
-                                Ok(Async::Ready(Some(ch)))
-                            }
-                        }
-                    }
+                // take off the delimiter that was found
+                let len = chunk.len() - delimiter.len();
+                if len == 0 {
+                    Ok(Async::Ready(None))
                 } else {
-                    let to = chunk.len() - 1;
-                    let ch = chunk.split_to(to);
+                    let ch = chunk.split_to(len);
                     payload.unprocessed(chunk);
                     Ok(Async::Ready(Some(ch)))
                 }
             }
         }
+
+        // match payload.read_until(b"\r")? {
+        //     Async::NotReady => Ok(Async::NotReady),
+        //     Async::Ready(None) => Err(MultipartError::Incomplete),
+        //     Async::Ready(Some(mut chunk)) => {
+        //         if chunk.len() == 1 {
+        //             payload.unprocessed(chunk);
+
+
+        //             // what the fuck??
+        //             match payload.read_exact(boundary.len() + 4)? {
+        //                 Async::NotReady => Ok(Async::NotReady),
+        //                 Async::Ready(None) => Err(MultipartError::Incomplete),
+        //                 Async::Ready(Some(mut chunk)) => {
+        //                     if &chunk[..2] == b"\r\n"
+        //                         && &chunk[2..4] == b"--"
+        //                         && &chunk[4..] == boundary.as_bytes()
+        //                     {
+        //                         payload.unprocessed(chunk);
+        //                         Ok(Async::Ready(None))
+        //                     } else {
+        //                         // \r might be part of data stream
+        //                         let ch = chunk.split_to(1);
+        //                         payload.unprocessed(chunk);
+        //                         Ok(Async::Ready(Some(ch)))
+        //                     }
+        //                 }
+        //             }
+        //         } else {
+        //             let to = chunk.len() - 1;
+        //             let ch = chunk.split_to(to);
+        //             payload.unprocessed(chunk);
+        //             Ok(Async::Ready(Some(ch)))
+        //         }
+        //     }
+        // }
     }
 
     fn poll(&mut self, s: &Safety) -> Poll<Option<Bytes>, MultipartError> {
@@ -551,11 +576,14 @@ where
         }
 
         let result = if let Some(payload) = self.payload.as_ref().unwrap().get_mut(s) {
-            let res = if let Some(ref mut len) = self.length {
-                InnerField::read_len(payload, len)?
-            } else {
-                InnerField::read_stream(payload, &self.boundary)?
-            };
+            // let res = if let Some(ref mut len) = self.length {
+            //     InnerField::read_len(payload, len)?
+            // } else {
+            //     InnerField::read_stream(payload, &self.boundary)?
+            // };
+
+            // RFC doesn't say anything about length, so always read stream here
+            let res = InnerField::read_stream(payload, &self.boundary)?;
 
             match res {
                 Async::NotReady => Async::NotReady,
@@ -703,7 +731,7 @@ mod tests {
             header::HeaderValue::from_static("multipart/mixed"),
         );
         match Multipart::boundary(&headers) {
-            Err(MultipartError::Boundary) => (),
+            Err(MultipartError::MissingBoundary) => (),
             _ => unreachable!("should not happen"),
         }
 
@@ -729,15 +757,14 @@ mod tests {
                 let (mut sender, payload) = Payload::new(false);
 
                 let bytes = Bytes::from(
-                "testasdadsad\r\n\
-                 --abbc761f78ff4d7cb7573b5a23f96ef0\r\n\
+                "testasdadsad
+                 \r\n--abbc761f78ff4d7cb7573b5a23f96ef0\r\n\
                  Content-Disposition: form-data; name=\"file\"; filename=\"fn.txt\"\r\n\
                  Content-Type: text/plain; charset=utf-8\r\nContent-Length: 4\r\n\r\n\
-                 test\r\n\
-                 --abbc761f78ff4d7cb7573b5a23f96ef0\r\n\
+                 test\r\n--abbc761f78ff4d7cb7573b5a23f96ef0\r\n\
                  Content-Type: text/plain; charset=utf-8\r\nContent-Length: 4\r\n\r\n\
-                 data\r\n\
-                 --abbc761f78ff4d7cb7573b5a23f96ef0--\r\n");
+                 data
+                 \r\n--abbc761f78ff4d7cb7573b5a23f96ef0--\r\n");
                 sender.feed_data(bytes);
 
                 let mut multipart = Multipart::new(
@@ -805,5 +832,99 @@ mod tests {
                 let res: Result<(), ()> = Ok(());
                 result(res)
             })).unwrap();
+    }
+
+    #[test]
+    fn rfc1341_appendix_c_example() {
+        // source: https://tools.ietf.org/html/rfc1341#page-62
+        Runtime::new()
+            .unwrap()
+            .block_on(lazy(|| {
+                let (mut sender, payload) = Payload::new(false);
+                let bytes = Bytes::from("
+                    This is the preamble area of a multipart message.
+                    Mail readers that understand multipart format
+                    should ignore this preamble.
+                    If you are reading this text, you might want to
+                    consider changing to a mail reader that understands
+                    how to properly display multipart messages.
+                    \r\n--unique-boundary-1\r\n\
+                    \r\n\
+                    ...Some text appears here...
+                    [Note that the preceding blank line means
+                    no header fields were given and this is text,
+                    with charset US ASCII.  It could have been
+                    done with explicit typing as in the next part.]
+                    \r\n--unique-boundary-1\r\n\
+                    Content-type: text/plain; charset=US-ASCII\r\n\
+                    \r\n\
+                    This could have been part of the previous part,
+                    but illustrates explicit versus implicit
+                    typing of body parts.
+                    \r\n--unique-boundary-1\r\n\
+                    Content-Type: multipart/parallel;\r\n\
+                    boundary=unique-boundary-2\r\n\
+                    \r\n--unique-boundary-2\r\n\
+                    Content-Type: audio/basic\r\n\
+                    Content-Transfer-Encoding: base64\r\n\
+                    \r\n\
+                    ... base64-encoded 8000 Hz single-channel
+                    u-law-format audio data goes here....
+                    \r\n--unique-boundary-2\r\n\
+                    Content-Type: image/gif\r\n\
+                    Content-Transfer-Encoding: Base64\r\n\
+                    \r\n\
+                    ... base64-encoded image data goes here....
+                    \r\n--unique-boundary-2--\r\n\
+                    \r\n--unique-boundary-1\r\n\
+                    Content-type: text/richtext\r\n\
+                    \r\n\
+                    This is <bold><italic>richtext.</italic></bold>
+                    <nl><nl>Isn't it
+                    <bigger><bigger>cool?</bigger></bigger>
+                    \r\n--unique-boundary-1\r\n\
+                    Content-Type: message/rfc822\r\n\
+                    \r\n\
+                    From: (name in US-ASCII)
+                    Subject: (subject in US-ASCII)
+                    Content-Type: Text/plain; charset=ISO-8859-1
+                    Content-Transfer-Encoding: Quoted-printable
+
+                    ... Additional text in ISO-8859-1 goes here ...
+                    \r\n--unique-boundary-1--");
+                sender.feed_data(bytes);
+
+                let mut multipart = Multipart::new(
+                    Ok("unique-boundary-1".to_owned()),
+                    payload,
+                );
+
+
+
+                loop {
+                    match multipart.poll() {
+                        Ok(Async::Ready(Some(item))) => match item {
+                            MultipartItem::Field(mut field) => {
+                                eprintln!("field: {:?}", field);
+
+                                loop {
+                                    match field.poll() {
+                                        Ok(Async::Ready(Some(chunk))) => eprintln!("data: {:?}", chunk),
+                                        Ok(Async::Ready(None)) => break,
+                                        _ => unreachable!(),
+                                    }
+                                }
+                            }
+                            _ => unreachable!(),
+                        },
+                        Ok(Async::NotReady) => eprintln!("not ready"),
+                        Ok(Async::Ready(None)) => break,
+                        Err(err) => panic!("err: {:?}", err),
+                    }
+                }
+
+                result(Ok::<_, ()>(()))
+            }))
+            .unwrap();
     }
 }

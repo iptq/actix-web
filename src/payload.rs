@@ -441,7 +441,7 @@ where
         }
     }
 
-    /// Read until specified ending
+    /// Read until specified ending, returning the ending as well.
     pub fn read_until(&mut self, line: &[u8]) -> Poll<Option<Bytes>, PayloadError> {
         let mut idx = 0;
         let mut num = 0;
