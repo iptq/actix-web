@@ -65,23 +65,17 @@ struct InnerMultipart<S> {
 impl Multipart<()> {
     /// Extract boundary info from headers.
     pub fn boundary(headers: &HeaderMap) -> Result<String, MultipartError> {
-        if let Some(content_type) = headers.get(header::CONTENT_TYPE) {
-            if let Ok(content_type) = content_type.to_str() {
-                if let Ok(ct) = content_type.parse::<mime::Mime>() {
-                    if let Some(boundary) = ct.get_param(mime::BOUNDARY) {
-                        Ok(boundary.as_str().to_owned())
-                    } else {
-                        Err(MultipartError::Boundary)
-                    }
-                } else {
-                    Err(MultipartError::ParseContentType)
-                }
-            } else {
-                Err(MultipartError::ParseContentType)
-            }
-        } else {
-            Err(MultipartError::NoContentType)
-        }
+        Ok(headers
+            .get(header::CONTENT_TYPE)
+            .ok_or_else(|| MultipartError::NoContentType)?
+            .to_str()
+            .map_err(|_| MultipartError::ParseContentType)?
+            .parse::<mime::Mime>()
+            .map_err(|_| MultipartError::ParseContentType)?
+            .get_param(mime::BOUNDARY)
+            .ok_or_else(|| MultipartError::Boundary)?
+            .as_str()
+            .to_owned())
     }
 }
 
