@@ -53,7 +53,8 @@ impl ResponseError for SendRequestError {
             SendRequestError::Timeout => HttpResponse::GatewayTimeout(),
             SendRequestError::Connector(_) => HttpResponse::BadGateway(),
             _ => HttpResponse::InternalServerError(),
-        }.into()
+        }
+        .into()
     }
 }
 

@@ -129,7 +129,8 @@ impl<S> Handler<S> for NormalizePath {
                             )
                         } else {
                             req.header(header::LOCATION, p)
-                        }.finish();
+                        }
+                        .finish();
                     }
                 }
             } else if p.ends_with('/') {
@@ -144,7 +145,8 @@ impl<S> Handler<S> for NormalizePath {
                         )
                     } else {
                         req.header(header::LOCATION, p)
-                    }.finish();
+                    }
+                    .finish();
                 }
             }
         }
@@ -279,7 +281,8 @@ mod tests {
                     true,
                     StatusCode::MOVED_PERMANENTLY,
                 ))
-            }).finish();
+            })
+            .finish();
 
         // trailing slashes
         let params = vec![

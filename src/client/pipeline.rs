@@ -6,8 +6,8 @@ use std::time::{Duration, Instant};
 use std::{io, mem};
 use tokio_timer::Delay;
 
-use actix_inner::dev::Request;
 use actix::{Addr, SystemService};
+use actix_inner::dev::Request;
 
 use super::{
     ClientConnector, ClientConnectorError, ClientRequest, ClientResponse, Connect,
@@ -367,7 +367,7 @@ impl Pipeline {
                                 Err(ref err)
                                     if err.kind() == io::ErrorKind::WouldBlock =>
                                 {
-                                    continue
+                                    continue;
                                 }
                                 Err(err) => return Err(err.into()),
                             }

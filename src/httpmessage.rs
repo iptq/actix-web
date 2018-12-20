@@ -480,7 +480,8 @@ where
                         body.extend_from_slice(&chunk);
                         Ok(body)
                     }
-                }).map(|body| body.freeze()),
+                })
+                .map(|body| body.freeze()),
         ));
         self.poll()
     }
@@ -588,7 +589,8 @@ where
                     body.extend_from_slice(&chunk);
                     Ok(body)
                 }
-            }).and_then(move |body| {
+            })
+            .and_then(move |body| {
                 if (encoding as *const Encoding) == UTF_8 {
                     serde_urlencoded::from_bytes::<U>(&body)
                         .map_err(|_| UrlencodedError::Parse)
@@ -646,7 +648,8 @@ mod tests {
         let req = TestRequest::with_header(
             "content-type",
             "applicationadfadsfasdflknadsfklnadsfjson",
-        ).finish();
+        )
+        .finish();
         assert_eq!(Err(ContentTypeError::ParseError), req.mime_type());
     }
 
@@ -661,7 +664,8 @@ mod tests {
         let req = TestRequest::with_header(
             "content-type",
             "application/json; charset=ISO-8859-2",
-        ).finish();
+        )
+        .finish();
         assert_eq!(ISO_8859_2.name(), req.encoding().unwrap().name());
     }
 
@@ -673,7 +677,8 @@ mod tests {
         let req = TestRequest::with_header(
             "content-type",
             "application/json; charset=kkkttktk",
-        ).finish();
+        )
+        .finish();
         assert_eq!(
             Some(ContentTypeError::UnknownEncoding),
             req.encoding().err()
@@ -693,7 +698,8 @@ mod tests {
             .header(
                 header::TRANSFER_ENCODING,
                 Bytes::from_static(b"some va\xadscc\xacas0xsdasdlue"),
-            ).finish();
+            )
+            .finish();
         assert!(req.chunked().is_err());
     }
 
@@ -731,7 +737,8 @@ mod tests {
         let req = TestRequest::with_header(
             header::CONTENT_TYPE,
             "application/x-www-form-urlencoded",
-        ).header(header::CONTENT_LENGTH, "xxxx")
+        )
+        .header(header::CONTENT_LENGTH, "xxxx")
         .finish();
         assert_eq!(
             req.urlencoded::<Info>().poll().err().unwrap(),
@@ -741,7 +748,8 @@ mod tests {
         let req = TestRequest::with_header(
             header::CONTENT_TYPE,
             "application/x-www-form-urlencoded",
-        ).header(header::CONTENT_LENGTH, "1000000")
+        )
+        .header(header::CONTENT_LENGTH, "1000000")
         .finish();
         assert_eq!(
             req.urlencoded::<Info>().poll().err().unwrap(),
@@ -762,7 +770,8 @@ mod tests {
         let req = TestRequest::with_header(
             header::CONTENT_TYPE,
             "application/x-www-form-urlencoded",
-        ).header(header::CONTENT_LENGTH, "11")
+        )
+        .header(header::CONTENT_LENGTH, "11")
         .set_payload(Bytes::from_static(b"hello=world"))
         .finish();
 
@@ -777,7 +786,8 @@ mod tests {
         let req = TestRequest::with_header(
             header::CONTENT_TYPE,
             "application/x-www-form-urlencoded; charset=utf-8",
-        ).header(header::CONTENT_LENGTH, "11")
+        )
+        .header(header::CONTENT_LENGTH, "11")
         .set_payload(Bytes::from_static(b"hello=world"))
         .finish();
 
@@ -828,7 +838,8 @@ mod tests {
                 b"Lorem Ipsum is simply dummy text of the printing and typesetting\n\
                   industry. Lorem Ipsum has been the industry's standard dummy\n\
                   Contrary to popular belief, Lorem Ipsum is not simply random text.",
-            )).finish();
+            ))
+            .finish();
         let mut r = Readlines::new(&req);
         match r.poll().ok().unwrap() {
             Async::Ready(Some(s)) => assert_eq!(

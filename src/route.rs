@@ -568,7 +568,7 @@ impl<S: 'static> RunMiddlewares<S> {
                     let state = info.mws[self.curr].response(&info.req, resp);
                     match state {
                         Err(err) => {
-                            return Some(FinishingMiddlewares::init(info, err.into()))
+                            return Some(FinishingMiddlewares::init(info, err.into()));
                         }
                         Ok(MiddlewareResponse::Done(r)) => {
                             self.curr += 1;

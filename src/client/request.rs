@@ -425,14 +425,16 @@ impl ClientRequestBuilder {
     {
         if let Some(parts) = parts(&mut self.request, &self.err) {
             match HeaderName::try_from(key) {
-                Ok(key) => if !parts.headers.contains_key(&key) {
-                    match value.try_into() {
-                        Ok(value) => {
-                            parts.headers.insert(key, value);
+                Ok(key) => {
+                    if !parts.headers.contains_key(&key) {
+                        match value.try_into() {
+                            Ok(value) => {
+                                parts.headers.insert(key, value);
+                            }
+                            Err(e) => self.err = Some(e.into()),
                         }
-                        Err(e) => self.err = Some(e.into()),
                     }
-                },
+                }
                 Err(e) => self.err = Some(e.into()),
             };
         }

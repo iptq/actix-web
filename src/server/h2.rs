@@ -60,10 +60,7 @@ where
     H: HttpHandler + 'static,
 {
     pub fn new(
-        settings: ServiceConfig<H>,
-        io: T,
-        buf: Bytes,
-        keepalive_timer: Option<Delay>,
+        settings: ServiceConfig<H>, io: T, buf: Bytes, keepalive_timer: Option<Delay>,
     ) -> Self {
         let addr = io.peer_addr();
         let extensions = io.extensions();
@@ -353,11 +350,8 @@ struct Entry<H: HttpHandler + 'static> {
 
 impl<H: HttpHandler + 'static> Entry<H> {
     fn new(
-        parts: Parts,
-        recv: RecvStream,
-        resp: SendResponse<Bytes>,
-        addr: Option<SocketAddr>,
-        settings: ServiceConfig<H>,
+        parts: Parts, recv: RecvStream, resp: SendResponse<Bytes>,
+        addr: Option<SocketAddr>, settings: ServiceConfig<H>,
         extensions: Option<Rc<Extensions>>,
     ) -> Entry<H>
     where

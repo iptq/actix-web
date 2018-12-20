@@ -3,11 +3,12 @@ use std::net::Shutdown;
 use std::time::{Duration, Instant};
 use std::{fmt, io, mem, time};
 
-use actix_inner::actors::resolver::{Connect as ResolveConnect, Resolver, ResolverError};
+use actix_inner::actors::resolver::{
+    Connect as ResolveConnect, Resolver, ResolverError,
+};
 use actix_inner::{
-    fut, Actor, ActorFuture, ActorResponse, AsyncContext, Context,
-    ContextFutureSpawner, Handler, Message, Recipient, StreamHandler, Supervised,
-    SystemService, WrapFuture,
+    fut, Actor, ActorFuture, ActorResponse, AsyncContext, Context, ContextFutureSpawner,
+    Handler, Message, Recipient, StreamHandler, Supervised, SystemService, WrapFuture,
 };
 
 use futures::sync::{mpsc, oneshot};
@@ -725,10 +726,12 @@ impl ClientConnector {
                 ResolveConnect::host_and_port(&conn.0.host, conn.0.port)
                     .timeout(waiter.conn_timeout),
             ),
-        ).map_err(move |_, act, _| {
+        )
+        .map_err(move |_, act, _| {
             act.release_key(&key2);
             ()
-        }).and_then(move |res, act, _| {
+        })
+        .and_then(move |res, act, _| {
             #[cfg(any(feature = "alpn", feature = "ssl"))]
             match res {
                 Err(err) => {
@@ -827,10 +830,8 @@ impl ClientConnector {
                     if conn.0.ssl {
                         let host = DNSNameRef::try_from_ascii_str(&key.host).unwrap();
                         fut::Either::A(
-                            act.connector
-                                .connect(host, stream)
-                                .into_actor(act)
-                                .then(move |res, _, _| {
+                            act.connector.connect(host, stream).into_actor(act).then(
+                                move |res, _, _| {
                                     match res {
                                         Err(e) => {
                                             let _ = waiter.tx.send(Err(
@@ -846,7 +847,8 @@ impl ClientConnector {
                                         }
                                     }
                                     fut::ok(())
-                                }),
+                                },
+                            ),
                         )
                     } else {
                         let _ = waiter.tx.send(Ok(Connection::new(
@@ -885,7 +887,8 @@ impl ClientConnector {
                     fut::ok(())
                 }
             }
-        }).spawn(ctx);
+        })
+        .spawn(ctx);
     }
 }
 
@@ -930,7 +933,7 @@ impl Handler<Connect> for ClientConnector {
             Some(scheme) => match Protocol::from(scheme.as_str()) {
                 Some(proto) => proto,
                 None => {
-                    return ActorResponse::reply(Err(ClientConnectorError::InvalidUrl))
+                    return ActorResponse::reply(Err(ClientConnectorError::InvalidUrl));
                 }
             },
             None => return ActorResponse::reply(Err(ClientConnectorError::InvalidUrl)),
@@ -942,7 +945,10 @@ impl Handler<Connect> for ClientConnector {
         }
 
         let host = uri.host().unwrap().to_owned();
-        let port = uri.port_part().map(|port| port.as_u16()).unwrap_or_else(|| proto.port());
+        let port = uri
+            .port_part()
+            .map(|port| port.as_u16())
+            .unwrap_or_else(|| proto.port());
         let key = Key {
             host,
             port,

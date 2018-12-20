@@ -142,10 +142,7 @@ impl TestServer {
             builder.set_verify(SslVerifyMode::NONE);
             ClientConnector::with_connector(builder.build()).start()
         }
-        #[cfg(all(
-            feature = "rust-tls",
-            not(any(feature = "alpn", feature = "ssl"))
-        ))]
+        #[cfg(all(feature = "rust-tls", not(any(feature = "alpn", feature = "ssl"))))]
         {
             use rustls::ClientConfig;
             use std::fs::File;
@@ -329,7 +326,8 @@ where
                 let mut app = TestApp::new(state());
                 config(&mut app);
                 app
-            }).workers(1)
+            })
+            .workers(1)
             .keep_alive(5)
             .disable_signals();
 

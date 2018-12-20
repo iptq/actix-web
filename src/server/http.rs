@@ -324,10 +324,7 @@ where
 
     /// Start listening for incoming connections with supplied acceptor.
     #[doc(hidden)]
-    #[cfg_attr(
-        feature = "cargo-clippy",
-        allow(needless_pass_by_value)
-    )]
+    #[cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))]
     pub fn bind_with<S, A>(mut self, addr: S, acceptor: A) -> io::Result<Self>
     where
         S: net::ToSocketAddrs,

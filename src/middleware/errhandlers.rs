@@ -130,7 +130,8 @@ mod tests {
             app.middleware(
                 ErrorHandlers::new()
                     .handler(StatusCode::INTERNAL_SERVER_ERROR, render_500),
-            ).middleware(MiddlewareOne)
+            )
+            .middleware(MiddlewareOne)
             .handler(|_| HttpResponse::Ok())
         });
 

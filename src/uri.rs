@@ -142,7 +142,6 @@ fn restore_ch(d1: u8, d2: u8) -> Option<u8> {
     from_hex(d1).and_then(|d1| from_hex(d2).and_then(move |d2| Some(d1 << 4 | d2)))
 }
 
-
 #[cfg(test)]
 mod tests {
     use std::rc::Rc;
@@ -154,16 +153,22 @@ mod tests {
         assert_eq!(UNRESERVED_QUOTER.requote(b"https://localhost:80/foo"), None);
 
         assert_eq!(
-            Rc::try_unwrap(UNRESERVED_QUOTER.requote(
-                b"https://localhost:80/foo%25"
-            ).unwrap()).unwrap(),
+            Rc::try_unwrap(
+                UNRESERVED_QUOTER
+                    .requote(b"https://localhost:80/foo%25")
+                    .unwrap()
+            )
+            .unwrap(),
             "https://localhost:80/foo%25".to_string()
         );
 
         assert_eq!(
-            Rc::try_unwrap(UNRESERVED_QUOTER.requote(
-                b"http://cache-service/http%3A%2F%2Flocalhost%3A80%2Ffoo"
-            ).unwrap()).unwrap(),
+            Rc::try_unwrap(
+                UNRESERVED_QUOTER
+                    .requote(b"http://cache-service/http%3A%2F%2Flocalhost%3A80%2Ffoo")
+                    .unwrap()
+            )
+            .unwrap(),
             "http://cache-service/http%3A%2F%2Flocalhost%3A80%2Ffoo".to_string()
         );
 

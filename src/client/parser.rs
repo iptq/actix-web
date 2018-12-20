@@ -68,7 +68,7 @@ impl HttpResponseParser {
             // Read some more data into the buffer for the parser.
             match io.read_available(buf) {
                 Ok(Async::Ready((false, true))) => {
-                    return Err(HttpResponseParserError::Disconnect)
+                    return Err(HttpResponseParserError::Disconnect);
                 }
                 Ok(Async::Ready(_)) => (),
                 Ok(Async::NotReady) => return Ok(Async::NotReady),

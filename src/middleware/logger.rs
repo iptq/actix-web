@@ -321,7 +321,8 @@ mod tests {
         let req = TestRequest::with_header(
             header::USER_AGENT,
             header::HeaderValue::from_static("ACTIX-WEB"),
-        ).finish();
+        )
+        .finish();
         let resp = HttpResponse::build(StatusCode::OK)
             .header("X-Test", "ttt")
             .force_close()
@@ -353,7 +354,8 @@ mod tests {
         let req = TestRequest::with_header(
             header::USER_AGENT,
             header::HeaderValue::from_static("ACTIX-WEB"),
-        ).finish();
+        )
+        .finish();
         let resp = HttpResponse::build(StatusCode::OK).force_close().finish();
         let entry_time = time::now();
 

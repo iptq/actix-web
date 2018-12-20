@@ -87,10 +87,7 @@ where
     H: HttpHandler + 'static,
 {
     pub fn new(
-        settings: ServiceConfig<H>,
-        stream: T,
-        buf: BytesMut,
-        is_eof: bool,
+        settings: ServiceConfig<H>, stream: T, buf: BytesMut, is_eof: bool,
         keepalive_timer: Option<Delay>,
     ) -> Self {
         let addr = stream.peer_addr();
@@ -126,11 +123,8 @@ where
     }
 
     pub(crate) fn for_error(
-        settings: ServiceConfig<H>,
-        stream: T,
-        status: StatusCode,
-        mut keepalive_timer: Option<Delay>,
-        buf: BytesMut,
+        settings: ServiceConfig<H>, stream: T, status: StatusCode,
+        mut keepalive_timer: Option<Delay>, buf: BytesMut,
     ) -> Self {
         if let Some(deadline) = settings.client_timer_expire() {
             let _ = keepalive_timer.as_mut().map(|delay| delay.reset(deadline));
@@ -874,13 +868,13 @@ mod tests {
         let settings = wrk_settings();
 
         let mut reader = H1Decoder::new();
-        assert!{ reader.decode(&mut buf, &settings).unwrap().is_none() }
+        assert! { reader.decode(&mut buf, &settings).unwrap().is_none() }
 
         buf.extend(b"t");
-        assert!{ reader.decode(&mut buf, &settings).unwrap().is_none() }
+        assert! { reader.decode(&mut buf, &settings).unwrap().is_none() }
 
         buf.extend(b"es");
-        assert!{ reader.decode(&mut buf, &settings).unwrap().is_none() }
+        assert! { reader.decode(&mut buf, &settings).unwrap().is_none() }
 
         buf.extend(b"t: value\r\n\r\n");
         match reader.decode(&mut buf, &settings) {

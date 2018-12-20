@@ -15,14 +15,8 @@ use super::KeepAlive;
 
 pub(crate) trait ServiceProvider {
     fn register(
-        &self,
-        server: Server,
-        lst: net::TcpListener,
-        host: String,
-        addr: net::SocketAddr,
-        keep_alive: KeepAlive,
-        secure: bool,
-        client_timeout: u64,
+        &self, server: Server, lst: net::TcpListener, host: String,
+        addr: net::SocketAddr, keep_alive: KeepAlive, secure: bool, client_timeout: u64,
         client_shutdown: u64,
     ) -> Server;
 }
@@ -49,13 +43,8 @@ where
     }
 
     fn finish(
-        &self,
-        host: String,
-        addr: net::SocketAddr,
-        keep_alive: KeepAlive,
-        secure: bool,
-        client_timeout: u64,
-        client_shutdown: u64,
+        &self, host: String, addr: net::SocketAddr, keep_alive: KeepAlive, secure: bool,
+        client_timeout: u64, client_shutdown: u64,
     ) -> impl ServiceFactory {
         let factory = self.factory.clone();
         let acceptor = self.acceptor.clone();
@@ -74,7 +63,8 @@ where
                     TcpAcceptor::new(AcceptorTimeout::new(
                         client_timeout,
                         acceptor.create(),
-                    )).map_err(|_| ())
+                    ))
+                    .map_err(|_| ())
                     .map_init_err(|_| ())
                     .and_then(StreamConfiguration::new().nodelay(true))
                     .and_then(
@@ -108,14 +98,8 @@ where
     H: IntoHttpHandler,
 {
     fn register(
-        &self,
-        server: Server,
-        lst: net::TcpListener,
-        host: String,
-        addr: net::SocketAddr,
-        keep_alive: KeepAlive,
-        secure: bool,
-        client_timeout: u64,
+        &self, server: Server, lst: net::TcpListener, host: String,
+        addr: net::SocketAddr, keep_alive: KeepAlive, secure: bool, client_timeout: u64,
         client_shutdown: u64,
     ) -> Server {
         server.listen2(

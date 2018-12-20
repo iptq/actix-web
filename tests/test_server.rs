@@ -186,10 +186,12 @@ fn test_panic() {
                         r.method(http::Method::GET).f(|_| -> &'static str {
                             panic!("error");
                         });
-                    }).resource("/", |r| {
+                    })
+                    .resource("/", |r| {
                         r.method(http::Method::GET).f(|_| HttpResponse::Ok())
                     })
-            }).workers(1);
+            })
+            .workers(1);
 
             let srv = srv.bind("127.0.0.1:0").unwrap();
             let addr = srv.addrs()[0];
@@ -637,7 +639,8 @@ fn test_gzip_encoding() {
                     Ok(HttpResponse::Ok()
                         .content_encoding(http::ContentEncoding::Identity)
                         .body(bytes))
-                }).responder()
+                })
+                .responder()
         })
     });
 
@@ -669,7 +672,8 @@ fn test_gzip_encoding_large() {
                     Ok(HttpResponse::Ok()
                         .content_encoding(http::ContentEncoding::Identity)
                         .body(bytes))
-                }).responder()
+                })
+                .responder()
         })
     });
 
@@ -705,7 +709,8 @@ fn test_reading_gzip_encoding_large_random() {
                     Ok(HttpResponse::Ok()
                         .content_encoding(http::ContentEncoding::Identity)
                         .body(bytes))
-                }).responder()
+                })
+                .responder()
         })
     });
 
@@ -737,7 +742,8 @@ fn test_reading_deflate_encoding() {
                     Ok(HttpResponse::Ok()
                         .content_encoding(http::ContentEncoding::Identity)
                         .body(bytes))
-                }).responder()
+                })
+                .responder()
         })
     });
 
@@ -769,7 +775,8 @@ fn test_reading_deflate_encoding_large() {
                     Ok(HttpResponse::Ok()
                         .content_encoding(http::ContentEncoding::Identity)
                         .body(bytes))
-                }).responder()
+                })
+                .responder()
         })
     });
 
@@ -805,7 +812,8 @@ fn test_reading_deflate_encoding_large_random() {
                     Ok(HttpResponse::Ok()
                         .content_encoding(http::ContentEncoding::Identity)
                         .body(bytes))
-                }).responder()
+                })
+                .responder()
         })
     });
 
@@ -838,7 +846,8 @@ fn test_brotli_encoding() {
                     Ok(HttpResponse::Ok()
                         .content_encoding(http::ContentEncoding::Identity)
                         .body(bytes))
-                }).responder()
+                })
+                .responder()
         })
     });
 
@@ -871,7 +880,8 @@ fn test_brotli_encoding_large() {
                     Ok(HttpResponse::Ok()
                         .content_encoding(http::ContentEncoding::Identity)
                         .body(bytes))
-                }).responder()
+                })
+                .responder()
         })
     });
 
@@ -917,7 +927,8 @@ fn test_brotli_encoding_large_ssl() {
                     Ok(HttpResponse::Ok()
                         .content_encoding(http::ContentEncoding::Identity)
                         .body(bytes))
-                }).responder()
+                })
+                .responder()
         })
     });
     let mut rt = System::new("test");
@@ -978,7 +989,8 @@ fn test_reading_deflate_encoding_large_random_ssl() {
                     Ok(HttpResponse::Ok()
                         .content_encoding(http::ContentEncoding::Identity)
                         .body(bytes))
-                }).responder()
+                })
+                .responder()
         })
     });
 
@@ -1055,9 +1067,11 @@ fn test_reading_deflate_encoding_large_random_tls() {
                             Ok(HttpResponse::Ok()
                                 .content_encoding(http::ContentEncoding::Identity)
                                 .body(bytes))
-                        }).responder()
+                        })
+                        .responder()
                 })
-            }).bind_tls(addr, acceptor)
+            })
+            .bind_tls(addr, acceptor)
             .unwrap()
             .start();
             let _ = tx.send(System::current());
@@ -1161,7 +1175,8 @@ fn test_default_404_handler_response() {
             tokio::io::write_all(sock, "HEAD / HTTP/1.1\r\nHost: localhost\r\n\r\n")
                 .and_then(|(sock, _)| tokio::io::read_exact(sock, &mut buf))
                 .and_then(|(_, buf)| Ok(buf))
-        }).map_err(|e| panic!("{:?}", e));
+        })
+        .map_err(|e| panic!("{:?}", e));
     let response = srv.execute(request).unwrap();
     let rep = String::from_utf8_lossy(&response[..]);
     assert!(rep.contains("HTTP/1.1 404 Not Found"));
@@ -1179,7 +1194,8 @@ fn test_server_cookies() {
                         http::CookieBuilder::new("first", "first_value")
                             .http_only(true)
                             .finish(),
-                    ).cookie(http::Cookie::new("second", "first_value"))
+                    )
+                    .cookie(http::Cookie::new("second", "first_value"))
                     .cookie(http::Cookie::new("second", "second_value"))
                     .finish()
             })

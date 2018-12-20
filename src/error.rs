@@ -136,9 +136,7 @@ pub trait ResponseError: Fail + InternalResponseErrorAsFail {
     }
 }
 
-impl<T> ResponseError for SendError<T>
-where T: Send + Sync + 'static {
-}
+impl<T> ResponseError for SendError<T> where T: Send + Sync + 'static {}
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -186,7 +184,8 @@ impl<T: ResponseError> From<T> for Error {
 /// Compatibility for `failure::Error`
 impl<T> ResponseError for failure::Compat<T> where
     T: fmt::Display + fmt::Debug + Sync + Send + 'static
-{}
+{
+}
 
 impl From<failure::Error> for Error {
     fn from(err: failure::Error) -> Error {

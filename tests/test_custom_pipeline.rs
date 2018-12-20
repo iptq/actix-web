@@ -32,7 +32,8 @@ fn test_custom_pipeline() {
                     .nodelay(true)
                     .tcp_keepalive(Some(time::Duration::from_secs(10)))
                     .and_then(HttpService::new(settings))
-            }).unwrap()
+            })
+            .unwrap()
             .run();
     });
 
@@ -66,7 +67,8 @@ fn test_h1() {
                     .finish();
 
                 H1Service::new(settings)
-            }).unwrap()
+            })
+            .unwrap()
             .run();
     });
 

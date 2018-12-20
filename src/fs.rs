@@ -11,7 +11,7 @@ use std::{cmp, io};
 #[cfg(unix)]
 use std::os::unix::fs::MetadataExt;
 
-use askama_escape::{escape as escape_html_entity};
+use askama_escape::escape as escape_html_entity;
 use bytes::Bytes;
 use futures::{Async, Future, Poll, Stream};
 use futures_cpupool::{CpuFuture, CpuPool};
@@ -156,7 +156,7 @@ impl<C: StaticFileConfig> NamedFile<C> {
                     return Err(io::Error::new(
                         io::ErrorKind::InvalidInput,
                         "Provided path has no filename",
-                    ))
+                    ));
                 }
             };
 
@@ -411,7 +411,8 @@ impl<C: StaticFileConfig> Responder for NamedFile<C> {
 
         resp.if_some(last_modified, |lm, resp| {
             resp.set(header::LastModified(lm));
-        }).if_some(etag, |etag, resp| {
+        })
+        .if_some(etag, |etag, resp| {
             resp.set(header::ETag(etag));
         });
 
@@ -577,8 +578,7 @@ macro_rules! encode_file_name {
 }
 
 fn directory_listing<S>(
-    dir: &Directory,
-    req: &HttpRequest<S>,
+    dir: &Directory, req: &HttpRequest<S>,
 ) -> Result<HttpResponse, io::Error> {
     let index_of = format!("Index of {}", req.path());
     let mut body = String::new();
@@ -669,8 +669,7 @@ impl<S: 'static> StaticFiles<S> {
     /// Create new `StaticFiles` instance for specified base directory and
     /// `CpuPool`.
     pub fn with_pool<T: Into<PathBuf>>(
-        dir: T,
-        pool: CpuPool,
+        dir: T, pool: CpuPool,
     ) -> Result<StaticFiles<S>, Error> {
         Self::with_config_pool(dir, pool, DefaultConfig)
     }
@@ -681,8 +680,7 @@ impl<S: 'static, C: StaticFileConfig> StaticFiles<S, C> {
     ///
     /// Identical with `new` but allows to specify configiration to use.
     pub fn with_config<T: Into<PathBuf>>(
-        dir: T,
-        config: C,
+        dir: T, config: C,
     ) -> Result<StaticFiles<S, C>, Error> {
         // use default CpuPool
         let pool = { DEFAULT_CPUPOOL.lock().clone() };
@@ -693,9 +691,7 @@ impl<S: 'static, C: StaticFileConfig> StaticFiles<S, C> {
     /// Create new `StaticFiles` instance for specified base directory with config and
     /// `CpuPool`.
     pub fn with_config_pool<T: Into<PathBuf>>(
-        dir: T,
-        pool: CpuPool,
-        _: C,
+        dir: T, pool: CpuPool, _: C,
     ) -> Result<StaticFiles<S, C>, Error> {
         let dir = dir.into().canonicalize()?;
 
@@ -729,9 +725,9 @@ impl<S: 'static, C: StaticFileConfig> StaticFiles<S, C> {
     /// Set custom directory renderer
     pub fn files_listing_renderer<F>(mut self, f: F) -> Self
     where
-        for<'r, 's> F: Fn(&'r Directory, &'s HttpRequest<S>)
-                -> Result<HttpResponse, io::Error>
-            + 'static,
+        for<'r, 's> F:
+            Fn(&'r Directory, &'s HttpRequest<S>) -> Result<HttpResponse, io::Error>
+                + 'static,
     {
         self.renderer = Box::new(f);
         self
@@ -753,8 +749,7 @@ impl<S: 'static, C: StaticFileConfig> StaticFiles<S, C> {
     }
 
     fn try_handle(
-        &self,
-        req: &HttpRequest<S>,
+        &self, req: &HttpRequest<S>,
     ) -> Result<AsyncResult<HttpResponse>, Error> {
         let tail: String = req.match_info().query("tail")?;
         let relpath = PathBuf::from_param(tail.trim_left_matches('/'))?;
@@ -884,7 +879,8 @@ impl HttpRange {
                         length: length as u64,
                     }))
                 }
-            }).collect::<Result<_, _>>()?;
+            })
+            .collect::<Result<_, _>>()?;
 
         let ranges: Vec<HttpRange> = all_ranges.into_iter().filter_map(|x| x).collect();
 

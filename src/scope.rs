@@ -59,10 +59,7 @@ pub struct Scope<S> {
     middlewares: Rc<Vec<Box<Middleware<S>>>>,
 }
 
-#[cfg_attr(
-    feature = "cargo-clippy",
-    allow(new_without_default_derive)
-)]
+#[cfg_attr(feature = "cargo-clippy", allow(new_without_default_derive))]
 impl<S: 'static> Scope<S> {
     /// Create a new scope
     pub fn new(path: &str) -> Scope<S> {
@@ -647,7 +644,7 @@ impl<S: 'static> RunMiddlewares<S> {
                     let state = info.mws[self.curr].response(&info.req, resp);
                     match state {
                         Err(err) => {
-                            return Some(FinishingMiddlewares::init(info, err.into()))
+                            return Some(FinishingMiddlewares::init(info, err.into()));
                         }
                         Ok(MiddlewareResponse::Done(r)) => {
                             self.curr += 1;
@@ -760,7 +757,8 @@ mod tests {
         let app = App::new()
             .scope("/app", |scope| {
                 scope.resource("/path1", |r| r.f(|_| HttpResponse::Ok()))
-            }).finish();
+            })
+            .finish();
 
         let req = TestRequest::with_uri("/app/path1").request();
         let resp = app.run(req);
@@ -774,7 +772,8 @@ mod tests {
                 scope
                     .resource("", |r| r.f(|_| HttpResponse::Ok()))
                     .resource("/", |r| r.f(|_| HttpResponse::Created()))
-            }).finish();
+            })
+            .finish();
 
         let req = TestRequest::with_uri("/app").request();
         let resp = app.run(req);
@@ -790,7 +789,8 @@ mod tests {
         let app = App::new()
             .scope("/app/", |scope| {
                 scope.resource("", |r| r.f(|_| HttpResponse::Ok()))
-            }).finish();
+            })
+            .finish();
 
         let req = TestRequest::with_uri("/app").request();
         let resp = app.run(req);
@@ -806,7 +806,8 @@ mod tests {
         let app = App::new()
             .scope("/app/", |scope| {
                 scope.resource("/", |r| r.f(|_| HttpResponse::Ok()))
-            }).finish();
+            })
+            .finish();
 
         let req = TestRequest::with_uri("/app").request();
         let resp = app.run(req);
@@ -824,10 +825,12 @@ mod tests {
                 scope
                     .route("/path1", Method::GET, |_: HttpRequest<_>| {
                         HttpResponse::Ok()
-                    }).route("/path1", Method::DELETE, |_: HttpRequest<_>| {
+                    })
+                    .route("/path1", Method::DELETE, |_: HttpRequest<_>| {
                         HttpResponse::Ok()
                     })
-            }).finish();
+            })
+            .finish();
 
         let req = TestRequest::with_uri("/app/path1").request();
         let resp = app.run(req);
@@ -855,7 +858,8 @@ mod tests {
                     .route("path1", Method::DELETE, |_: HttpRequest<_>| {
                         HttpResponse::Ok()
                     })
-            }).finish();
+            })
+            .finish();
 
         let req = TestRequest::with_uri("/app/path1").request();
         let resp = app.run(req);
@@ -881,7 +885,8 @@ mod tests {
                 scope
                     .filter(pred::Get())
                     .resource("/path1", |r| r.f(|_| HttpResponse::Ok()))
-            }).finish();
+            })
+            .finish();
 
         let req = TestRequest::with_uri("/app/path1")
             .method(Method::POST)
@@ -906,7 +911,8 @@ mod tests {
                             .body(format!("project: {}", &r.match_info()["project"]))
                     })
                 })
-            }).finish();
+            })
+            .finish();
 
         let req = TestRequest::with_uri("/ab-project1/path1").request();
         let resp = app.run(req);
@@ -934,7 +940,8 @@ mod tests {
                 scope.with_state("/t1", State, |scope| {
                     scope.resource("/path1", |r| r.f(|_| HttpResponse::Created()))
                 })
-            }).finish();
+            })
+            .finish();
 
         let req = TestRequest::with_uri("/app/t1/path1").request();
         let resp = app.run(req);
@@ -952,7 +959,8 @@ mod tests {
                         .resource("", |r| r.f(|_| HttpResponse::Ok()))
                         .resource("/", |r| r.f(|_| HttpResponse::Created()))
                 })
-            }).finish();
+            })
+            .finish();
 
         let req = TestRequest::with_uri("/app/t1").request();
         let resp = app.run(req);
@@ -972,7 +980,8 @@ mod tests {
                 scope.with_state("/t1/", State, |scope| {
                     scope.resource("", |r| r.f(|_| HttpResponse::Ok()))
                 })
-            }).finish();
+            })
+            .finish();
 
         let req = TestRequest::with_uri("/app/t1").request();
         let resp = app.run(req);
@@ -992,7 +1001,8 @@ mod tests {
                 scope.with_state("/t1/", State, |scope| {
                     scope.resource("/", |r| r.f(|_| HttpResponse::Ok()))
                 })
-            }).finish();
+            })
+            .finish();
 
         let req = TestRequest::with_uri("/app/t1").request();
         let resp = app.run(req);
@@ -1014,7 +1024,8 @@ mod tests {
                         .filter(pred::Get())
                         .resource("/path1", |r| r.f(|_| HttpResponse::Ok()))
                 })
-            }).finish();
+            })
+            .finish();
 
         let req = TestRequest::with_uri("/app/t1/path1")
             .method(Method::POST)
@@ -1036,7 +1047,8 @@ mod tests {
                 scope.nested("/t1", |scope| {
                     scope.resource("/path1", |r| r.f(|_| HttpResponse::Created()))
                 })
-            }).finish();
+            })
+            .finish();
 
         let req = TestRequest::with_uri("/app/t1/path1").request();
         let resp = app.run(req);
@@ -1050,7 +1062,8 @@ mod tests {
                 scope.nested("t1", |scope| {
                     scope.resource("/path1", |r| r.f(|_| HttpResponse::Created()))
                 })
-            }).finish();
+            })
+            .finish();
 
         let req = TestRequest::with_uri("/app/t1/path1").request();
         let resp = app.run(req);
@@ -1066,7 +1079,8 @@ mod tests {
                         .resource("", |r| r.f(|_| HttpResponse::Ok()))
                         .resource("/", |r| r.f(|_| HttpResponse::Created()))
                 })
-            }).finish();
+            })
+            .finish();
 
         let req = TestRequest::with_uri("/app/t1").request();
         let resp = app.run(req);
@@ -1086,7 +1100,8 @@ mod tests {
                         .filter(pred::Get())
                         .resource("/path1", |r| r.f(|_| HttpResponse::Ok()))
                 })
-            }).finish();
+            })
+            .finish();
 
         let req = TestRequest::with_uri("/app/t1/path1")
             .method(Method::POST)
@@ -1115,7 +1130,8 @@ mod tests {
                         })
                     })
                 })
-            }).finish();
+            })
+            .finish();
 
         let req = TestRequest::with_uri("/app/project_1/path1").request();
         let resp = app.run(req);
@@ -1147,7 +1163,8 @@ mod tests {
                         })
                     })
                 })
-            }).finish();
+            })
+            .finish();
 
         let req = TestRequest::with_uri("/app/test/1/path1").request();
         let resp = app.run(req);
@@ -1173,7 +1190,8 @@ mod tests {
                 scope
                     .resource("/path1", |r| r.f(|_| HttpResponse::Ok()))
                     .default_resource(|r| r.f(|_| HttpResponse::BadRequest()))
-            }).finish();
+            })
+            .finish();
 
         let req = TestRequest::with_uri("/app/path2").request();
         let resp = app.run(req);
@@ -1189,7 +1207,8 @@ mod tests {
         let app = App::new()
             .scope("/app1", |scope| {
                 scope.default_resource(|r| r.f(|_| HttpResponse::BadRequest()))
-            }).scope("/app2", |scope| scope)
+            })
+            .scope("/app2", |scope| scope)
             .default_resource(|r| r.f(|_| HttpResponse::MethodNotAllowed()))
             .finish();
 
@@ -1211,7 +1230,8 @@ mod tests {
         let app = App::new()
             .scope("/scope", |scope| {
                 scope.handler("/test", |_: &_| HttpResponse::Ok())
-            }).finish();
+            })
+            .finish();
 
         let req = TestRequest::with_uri("/scope/test").request();
         let resp = app.run(req);

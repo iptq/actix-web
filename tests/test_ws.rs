@@ -217,7 +217,8 @@ impl Ws2 {
                     act.send(ctx);
                 }
                 actix::fut::ok(())
-            }).wait(ctx);
+            })
+            .wait(ctx);
     }
 }
 

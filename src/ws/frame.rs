@@ -250,7 +250,7 @@ impl Frame {
         // control frames must have length <= 125
         match opcode {
             OpCode::Ping | OpCode::Pong if length > 125 => {
-                return Err(ProtocolError::InvalidLength(length))
+                return Err(ProtocolError::InvalidLength(length));
             }
             OpCode::Close if length > 125 => {
                 debug!("Received close frame with payload length exceeding 125. Morphing to protocol close frame.");
@@ -401,7 +401,8 @@ mod tests {
     fn test_parse() {
         let mut buf = PayloadBuffer::new(once(Ok(BytesMut::from(
             &[0b0000_0001u8, 0b0000_0001u8][..],
-        ).freeze())));
+        )
+        .freeze())));
         assert!(is_none(&Frame::parse(&mut buf, false, 1024)));
 
         let mut buf = BytesMut::from(&[0b0000_0001u8, 0b0000_0001u8][..]);

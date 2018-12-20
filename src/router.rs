@@ -632,11 +632,13 @@ impl ResourceDef {
         let path = if path.is_empty() { "/" } else { path };
 
         match self.tp {
-            PatternType::Static(ref s) => if s == path {
-                Some(plen)
-            } else {
-                None
-            },
+            PatternType::Static(ref s) => {
+                if s == path {
+                    Some(plen)
+                } else {
+                    None
+                }
+            }
             PatternType::Dynamic(ref re, _, len) => {
                 if let Some(captures) = re.captures(path) {
                     let mut pos = 0;
@@ -680,11 +682,13 @@ impl ResourceDef {
         let path = &req.path()[plen..];
 
         match self.tp {
-            PatternType::Static(ref s) => if s != path {
-                None
-            } else {
-                Some(Params::with_url(req.url()))
-            },
+            PatternType::Static(ref s) => {
+                if s != path {
+                    None
+                } else {
+                    Some(Params::with_url(req.url()))
+                }
+            }
             PatternType::Dynamic(ref re, ref names, _) => {
                 if let Some(captures) = re.captures(path) {
                     let mut params = Params::with_url(req.url());
@@ -712,11 +716,13 @@ impl ResourceDef {
                     None
                 }
             }
-            PatternType::Prefix(ref s) => if !path.starts_with(s) {
-                None
-            } else {
-                Some(Params::with_url(req.url()))
-            },
+            PatternType::Prefix(ref s) => {
+                if !path.starts_with(s) {
+                    None
+                } else {
+                    Some(Params::with_url(req.url()))
+                }
+            }
         }
     }
 
@@ -728,13 +734,15 @@ impl ResourceDef {
         let path = if path.is_empty() { "/" } else { path };
 
         match self.tp {
-            PatternType::Static(ref s) => if s == path {
-                let mut params = Params::with_url(req.url());
-                params.set_tail(req.path().len() as u16);
-                Some(params)
-            } else {
-                None
-            },
+            PatternType::Static(ref s) => {
+                if s == path {
+                    let mut params = Params::with_url(req.url());
+                    params.set_tail(req.path().len() as u16);
+                    Some(params)
+                } else {
+                    None
+                }
+            }
             PatternType::Dynamic(ref re, ref names, len) => {
                 if let Some(captures) = re.captures(path) {
                     let mut params = Params::with_url(req.url());
@@ -829,7 +837,8 @@ impl ResourceDef {
                     params_nesting == 0
                 }
                 _ => false,
-            }).expect("malformed param");
+            })
+            .expect("malformed param");
         let (mut param, rem) = pattern.split_at(close_idx + 1);
         param = &param[1..param.len() - 1]; // Remove outer brackets
         let (name, pattern) = match param.find(':') {

@@ -27,7 +27,7 @@ macro_rules! percent_decode_if_needed {
         } else {
             $value.parse()
         }
-    }
+    };
 }
 
 macro_rules! parse_single_value {
@@ -121,7 +121,8 @@ impl<'de, S: 'de> Deserializer<'de> for PathDeserializer<'de, S> {
                     "wrong number of parameters: {} expected {}",
                     self.req.match_info().len(),
                     len
-                ).as_str(),
+                )
+                .as_str(),
             ))
         } else {
             visitor.visit_seq(ParamsSeq {
@@ -143,7 +144,8 @@ impl<'de, S: 'de> Deserializer<'de> for PathDeserializer<'de, S> {
                     "wrong number of parameters: {} expected {}",
                     self.req.match_info().len(),
                     len
-                ).as_str(),
+                )
+                .as_str(),
             ))
         } else {
             visitor.visit_seq(ParamsSeq {
@@ -193,7 +195,6 @@ impl<'de, S: 'de> Deserializer<'de> for PathDeserializer<'de, S> {
     parse_single_value!(deserialize_str, visit_string, "String");
     parse_single_value!(deserialize_byte_buf, visit_string, "String");
     parse_single_value!(deserialize_char, visit_char, "char");
-
 }
 
 struct ParamsDeserializer<'de> {
@@ -221,7 +222,10 @@ impl<'de> de::MapAccess<'de> for ParamsDeserializer<'de> {
         V: de::DeserializeSeed<'de>,
     {
         if let Some((_, value)) = self.current.take() {
-            seed.deserialize(Value { value, decode: self.decode })
+            seed.deserialize(Value {
+                value,
+                decode: self.decode,
+            })
         } else {
             Err(de::value::Error::custom("unexpected item"))
         }
@@ -399,7 +403,10 @@ impl<'de> de::SeqAccess<'de> for ParamsSeq<'de> {
         T: de::DeserializeSeed<'de>,
     {
         match self.params.next() {
-            Some(item) => Ok(Some(seed.deserialize(Value { value: item.1, decode: self.decode })?)),
+            Some(item) => Ok(Some(seed.deserialize(Value {
+                value: item.1,
+                decode: self.decode,
+            })?)),
             None => Ok(None),
         }
     }

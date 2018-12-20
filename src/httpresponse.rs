@@ -142,7 +142,8 @@ impl HttpResponse {
         HeaderValue::from_str(&cookie.to_string())
             .map(|c| {
                 h.append(header::SET_COOKIE, c);
-            }).map_err(|e| e.into())
+            })
+            .map_err(|e| e.into())
     }
 
     /// Remove all cookies with the given name from this response. Returns
@@ -1078,7 +1079,8 @@ mod tests {
                     .http_only(true)
                     .max_age(Duration::days(1))
                     .finish(),
-            ).del_cookie(&cookies[0])
+            )
+            .del_cookie(&cookies[0])
             .finish();
 
         let mut val: Vec<_> = resp

@@ -389,9 +389,11 @@ impl<H> ServiceConfigBuilder<H> {
     pub fn server_address<S: net::ToSocketAddrs>(mut self, addr: S) -> Self {
         match addr.to_socket_addrs() {
             Err(err) => error!("Can not convert to SocketAddr: {}", err),
-            Ok(mut addrs) => if let Some(addr) = addrs.next() {
-                self.addr = addr;
-            },
+            Ok(mut addrs) => {
+                if let Some(addr) = addrs.next() {
+                    self.addr = addr;
+                }
+            }
         }
         self
     }

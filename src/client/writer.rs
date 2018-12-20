@@ -133,7 +133,8 @@ impl HttpClientWriter {
                     .map(|u| u.as_str())
                     .unwrap_or("/"),
                 msg.version()
-            ).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            )
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
 
             // write headers
             if let Body::Binary(ref bytes) = *msg.body() {

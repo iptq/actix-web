@@ -143,7 +143,7 @@ impl<S: 'static, H: PipelineHandler<S>> HttpHandlerTask for Pipeline<S, H> {
                 PipelineState::Error => {
                     return Err(
                         io::Error::new(io::ErrorKind::Other, "Internal error").into()
-                    )
+                    );
                 }
                 _ => (),
             }
@@ -154,7 +154,7 @@ impl<S: 'static, H: PipelineHandler<S>> HttpHandlerTask for Pipeline<S, H> {
                     return {
                         self.1 = state;
                         Ok(Async::NotReady)
-                    }
+                    };
                 }
             }
         }
@@ -165,7 +165,7 @@ impl<S: 'static, H: PipelineHandler<S>> HttpHandlerTask for Pipeline<S, H> {
         loop {
             match state {
                 PipelineState::None | PipelineState::Error => {
-                    return Ok(Async::Ready(()))
+                    return Ok(Async::Ready(()));
                 }
                 _ => (),
             }
@@ -212,7 +212,7 @@ impl<S: 'static, H: PipelineHandler<S>> StartMiddlewares<S, H> {
                             hnd,
                             fut: Some(fut),
                             _s: PhantomData,
-                        })
+                        });
                     }
                     Err(err) => {
                         return RunMiddlewares::init(info, mws, err.into());
@@ -488,7 +488,7 @@ impl<S: 'static, H> ProcessResponse<S, H> {
                                 info,
                                 mws,
                                 self.resp.take().unwrap(),
-                            ))
+                            ));
                         }
                         Ok(Async::NotReady) => {
                             self.iostate = IOState::Actor(ctx);

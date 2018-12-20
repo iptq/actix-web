@@ -12,7 +12,7 @@ use serde::de::{self, DeserializeOwned};
 use serde_urlencoded;
 
 use de::PathDeserializer;
-use error::{Error, ErrorBadRequest, ErrorNotFound, UrlencodedError, ErrorConflict};
+use error::{Error, ErrorBadRequest, ErrorConflict, ErrorNotFound, UrlencodedError};
 use handler::{AsyncResult, FromRequest};
 use httpmessage::{HttpMessage, MessageBody, UrlEncoded};
 use httprequest::HttpRequest;
@@ -164,8 +164,7 @@ impl<S> PathConfig<S> {
     }
 
     /// Disable decoding of URL encoded special charaters from the path
-    pub fn disable_decoding(&mut self) -> &mut Self
-    {
+    pub fn disable_decoding(&mut self) -> &mut Self {
         self.decode = false;
         self
     }
@@ -706,38 +705,62 @@ where
 ///     });
 /// }
 /// ```
-impl<A: 'static, B: 'static, S: 'static> FromRequest<S> for Either<A,B> where A: FromRequest<S>, B: FromRequest<S> {
-    type Config = EitherConfig<A,B,S>;
-    type Result = AsyncResult<Either<A,B>>;
+impl<A: 'static, B: 'static, S: 'static> FromRequest<S> for Either<A, B>
+where
+    A: FromRequest<S>,
+    B: FromRequest<S>,
+{
+    type Config = EitherConfig<A, B, S>;
+    type Result = AsyncResult<Either<A, B>>;
 
     #[inline]
     fn from_request(req: &HttpRequest<S>, cfg: &Self::Config) -> Self::Result {
-        let a = A::from_request(&req.clone(), &cfg.a).into().map(|a| Either::A(a));
+        let a = A::from_request(&req.clone(), &cfg.a)
+            .into()
+            .map(|a| Either::A(a));
         let b = B::from_request(req, &cfg.b).into().map(|b| Either::B(b));
 
         match &cfg.collision_strategy {
-            EitherCollisionStrategy::PreferA => AsyncResult::future(Box::new(a.or_else(|_| b))),
-            EitherCollisionStrategy::PreferB => AsyncResult::future(Box::new(b.or_else(|_| a))),
-            EitherCollisionStrategy::FastestSuccessful => AsyncResult::future(Box::new(a.select2(b).then( |r| match r {
-                Ok(future::Either::A((ares, _b))) => AsyncResult::ok(ares),
-                Ok(future::Either::B((bres, _a))) => AsyncResult::ok(bres),
-                Err(future::Either::A((_aerr, b))) => AsyncResult::future(Box::new(b)),
-                Err(future::Either::B((_berr, a))) => AsyncResult::future(Box::new(a))
-            }))),
-            EitherCollisionStrategy::ErrorA => AsyncResult::future(Box::new(b.then(|r| match r {
-                Err(_berr) => AsyncResult::future(Box::new(a)),
-                Ok(b) => AsyncResult::future(Box::new(a.then( |r| match r {
-                    Ok(_a) => Err(ErrorConflict("Both wings of either extractor completed")),
-                    Err(_arr) => Ok(b)
+            EitherCollisionStrategy::PreferA => {
+                AsyncResult::future(Box::new(a.or_else(|_| b)))
+            }
+            EitherCollisionStrategy::PreferB => {
+                AsyncResult::future(Box::new(b.or_else(|_| a)))
+            }
+            EitherCollisionStrategy::FastestSuccessful => {
+                AsyncResult::future(Box::new(a.select2(b).then(|r| match r {
+                    Ok(future::Either::A((ares, _b))) => AsyncResult::ok(ares),
+                    Ok(future::Either::B((bres, _a))) => AsyncResult::ok(bres),
+                    Err(future::Either::A((_aerr, b))) => {
+                        AsyncResult::future(Box::new(b))
+                    }
+                    Err(future::Either::B((_berr, a))) => {
+                        AsyncResult::future(Box::new(a))
+                    }
                 })))
-            }))),
-            EitherCollisionStrategy::ErrorB => AsyncResult::future(Box::new(a.then(|r| match r {
-                Err(_aerr) => AsyncResult::future(Box::new(b)),
-                Ok(a) => AsyncResult::future(Box::new(b.then( |r| match r {
-                    Ok(_b) => Err(ErrorConflict("Both wings of either extractor completed")),
-                    Err(_berr) => Ok(a)
+            }
+            EitherCollisionStrategy::ErrorA => {
+                AsyncResult::future(Box::new(b.then(|r| match r {
+                    Err(_berr) => AsyncResult::future(Box::new(a)),
+                    Ok(b) => AsyncResult::future(Box::new(a.then(|r| match r {
+                        Ok(_a) => Err(ErrorConflict(
+                            "Both wings of either extractor completed",
+                        )),
+                        Err(_arr) => Ok(b),
+                    }))),
                 })))
-            }))),
+            }
+            EitherCollisionStrategy::ErrorB => {
+                AsyncResult::future(Box::new(a.then(|r| match r {
+                    Err(_aerr) => AsyncResult::future(Box::new(b)),
+                    Ok(a) => AsyncResult::future(Box::new(b.then(|r| match r {
+                        Ok(_b) => Err(ErrorConflict(
+                            "Both wings of either extractor completed",
+                        )),
+                        Err(_berr) => Ok(a),
+                    }))),
+                })))
+            }
         }
     }
 }
@@ -754,7 +777,7 @@ pub enum EitherCollisionStrategy {
     /// Return error if both succeed, return error of A if both fail
     ErrorA,
     /// Return error if both succeed, return error of B if both fail
-    ErrorB
+    ErrorB,
 }
 
 impl Default for EitherCollisionStrategy {
@@ -766,18 +789,26 @@ impl Default for EitherCollisionStrategy {
 ///Determines Either extractor configuration
 ///
 ///By default `EitherCollisionStrategy::FastestSuccessful` is used.
-pub struct EitherConfig<A,B,S> where A: FromRequest<S>, B: FromRequest<S> {
+pub struct EitherConfig<A, B, S>
+where
+    A: FromRequest<S>,
+    B: FromRequest<S>,
+{
     a: A::Config,
     b: B::Config,
-    collision_strategy: EitherCollisionStrategy
+    collision_strategy: EitherCollisionStrategy,
 }
 
-impl<A,B,S> Default for EitherConfig<A,B,S> where A: FromRequest<S>, B: FromRequest<S> {
+impl<A, B, S> Default for EitherConfig<A, B, S>
+where
+    A: FromRequest<S>,
+    B: FromRequest<S>,
+{
     fn default() -> Self {
         EitherConfig {
             a: A::Config::default(),
             b: B::Config::default(),
-            collision_strategy: EitherCollisionStrategy::default()
+            collision_strategy: EitherCollisionStrategy::default(),
         }
     }
 }
@@ -1062,7 +1093,8 @@ mod tests {
         let req = TestRequest::with_header(
             header::CONTENT_TYPE,
             "application/x-www-form-urlencoded",
-        ).header(header::CONTENT_LENGTH, "11")
+        )
+        .header(header::CONTENT_LENGTH, "11")
         .set_payload(Bytes::from_static(b"hello=world"))
         .finish();
 
@@ -1081,7 +1113,8 @@ mod tests {
         let req = TestRequest::with_header(
             header::CONTENT_TYPE,
             "application/x-www-form-urlencoded",
-        ).finish();
+        )
+        .finish();
 
         let mut cfg = FormConfig::default();
         cfg.limit(4096);
@@ -1097,7 +1130,8 @@ mod tests {
         let req = TestRequest::with_header(
             header::CONTENT_TYPE,
             "application/x-www-form-urlencoded",
-        ).header(header::CONTENT_LENGTH, "9")
+        )
+        .header(header::CONTENT_LENGTH, "9")
         .set_payload(Bytes::from_static(b"hello=world"))
         .finish();
 
@@ -1117,7 +1151,8 @@ mod tests {
         let req = TestRequest::with_header(
             header::CONTENT_TYPE,
             "application/x-www-form-urlencoded",
-        ).header(header::CONTENT_LENGTH, "9")
+        )
+        .header(header::CONTENT_LENGTH, "9")
         .set_payload(Bytes::from_static(b"bye=world"))
         .finish();
 
@@ -1133,43 +1168,90 @@ mod tests {
     #[test]
     fn test_either() {
         let req = TestRequest::default().finish();
-        let mut cfg: EitherConfig<Query<Info>, Query<OtherInfo>, _> = EitherConfig::default();
+        let mut cfg: EitherConfig<Query<Info>, Query<OtherInfo>, _> =
+            EitherConfig::default();
 
-        assert!(Either::<Query<Info>, Query<OtherInfo>>::from_request(&req, &cfg).poll().is_err());
+        assert!(
+            Either::<Query<Info>, Query<OtherInfo>>::from_request(&req, &cfg)
+                .poll()
+                .is_err()
+        );
 
         let req = TestRequest::default().uri("/index?hello=world").finish();
 
-        match Either::<Query<Info>, Query<OtherInfo>>::from_request(&req, &cfg).poll().unwrap() {
-            Async::Ready(r) => assert_eq!(r, Either::A(Query(Info { hello: "world".into() }))),
+        match Either::<Query<Info>, Query<OtherInfo>>::from_request(&req, &cfg)
+            .poll()
+            .unwrap()
+        {
+            Async::Ready(r) => assert_eq!(
+                r,
+                Either::A(Query(Info {
+                    hello: "world".into()
+                }))
+            ),
             _ => unreachable!(),
         }
 
         let req = TestRequest::default().uri("/index?bye=world").finish();
-        match Either::<Query<Info>, Query<OtherInfo>>::from_request(&req, &cfg).poll().unwrap() {
-            Async::Ready(r) => assert_eq!(r, Either::B(Query(OtherInfo { bye: "world".into() }))),
+        match Either::<Query<Info>, Query<OtherInfo>>::from_request(&req, &cfg)
+            .poll()
+            .unwrap()
+        {
+            Async::Ready(r) => assert_eq!(
+                r,
+                Either::B(Query(OtherInfo {
+                    bye: "world".into()
+                }))
+            ),
             _ => unreachable!(),
         }
 
-        let req = TestRequest::default().uri("/index?hello=world&bye=world").finish();
+        let req = TestRequest::default()
+            .uri("/index?hello=world&bye=world")
+            .finish();
         cfg.collision_strategy = EitherCollisionStrategy::PreferA;
 
-        match Either::<Query<Info>, Query<OtherInfo>>::from_request(&req, &cfg).poll().unwrap() {
-            Async::Ready(r) => assert_eq!(r, Either::A(Query(Info { hello: "world".into() }))),
+        match Either::<Query<Info>, Query<OtherInfo>>::from_request(&req, &cfg)
+            .poll()
+            .unwrap()
+        {
+            Async::Ready(r) => assert_eq!(
+                r,
+                Either::A(Query(Info {
+                    hello: "world".into()
+                }))
+            ),
             _ => unreachable!(),
         }
 
         cfg.collision_strategy = EitherCollisionStrategy::PreferB;
 
-        match Either::<Query<Info>, Query<OtherInfo>>::from_request(&req, &cfg).poll().unwrap() {
-            Async::Ready(r) => assert_eq!(r, Either::B(Query(OtherInfo { bye: "world".into() }))),
+        match Either::<Query<Info>, Query<OtherInfo>>::from_request(&req, &cfg)
+            .poll()
+            .unwrap()
+        {
+            Async::Ready(r) => assert_eq!(
+                r,
+                Either::B(Query(OtherInfo {
+                    bye: "world".into()
+                }))
+            ),
             _ => unreachable!(),
         }
 
         cfg.collision_strategy = EitherCollisionStrategy::ErrorA;
-        assert!(Either::<Query<Info>, Query<OtherInfo>>::from_request(&req, &cfg).poll().is_err());
+        assert!(
+            Either::<Query<Info>, Query<OtherInfo>>::from_request(&req, &cfg)
+                .poll()
+                .is_err()
+        );
 
         cfg.collision_strategy = EitherCollisionStrategy::FastestSuccessful;
-        assert!(Either::<Query<Info>, Query<OtherInfo>>::from_request(&req, &cfg).poll().is_ok());
+        assert!(
+            Either::<Query<Info>, Query<OtherInfo>>::from_request(&req, &cfg)
+                .poll()
+                .is_ok()
+        );
     }
 
     #[test]
@@ -1177,7 +1259,8 @@ mod tests {
         let req = TestRequest::with_header(
             header::CONTENT_TYPE,
             "application/x-www-form-urlencoded",
-        ).header(header::CONTENT_LENGTH, "11")
+        )
+        .header(header::CONTENT_LENGTH, "11")
         .set_payload(Bytes::from_static(b"hello=world"))
         .finish();
 
@@ -1197,7 +1280,8 @@ mod tests {
         let req = TestRequest::with_header(
             header::CONTENT_TYPE,
             "application/x-www-form-urlencoded",
-        ).header(header::CONTENT_LENGTH, "9")
+        )
+        .header(header::CONTENT_LENGTH, "9")
         .set_payload(Bytes::from_static(b"bye=world"))
         .finish();
 
@@ -1220,7 +1304,8 @@ mod tests {
         let req = TestRequest::with_header(
             header::CONTENT_TYPE,
             "application/x-www-form-urlencoded",
-        ).finish();
+        )
+        .finish();
         assert!(cfg.check_mimetype(&req).is_err());
 
         let req =
@@ -1258,7 +1343,8 @@ mod tests {
         assert_eq!(s.key, "name");
         assert_eq!(s.value, "user1");
 
-        let s = Path::<(String, String)>::from_request(&req, &PathConfig::default()).unwrap();
+        let s = Path::<(String, String)>::from_request(&req, &PathConfig::default())
+            .unwrap();
         assert_eq!(s.0, "name");
         assert_eq!(s.1, "user1");
 
@@ -1275,7 +1361,8 @@ mod tests {
         assert_eq!(s.as_ref().key, "name");
         assert_eq!(s.value, 32);
 
-        let s = Path::<(String, u8)>::from_request(&req, &PathConfig::default()).unwrap();
+        let s =
+            Path::<(String, u8)>::from_request(&req, &PathConfig::default()).unwrap();
         assert_eq!(s.0, "name");
         assert_eq!(s.1, 32);
 
@@ -1292,7 +1379,10 @@ mod tests {
         let req = TestRequest::with_uri("/32/").finish();
         let info = router.recognize(&req, &(), 0);
         let req = req.with_route_info(info);
-        assert_eq!(*Path::<i8>::from_request(&req, &&PathConfig::default()).unwrap(), 32);
+        assert_eq!(
+            *Path::<i8>::from_request(&req, &&PathConfig::default()).unwrap(),
+            32
+        );
     }
 
     #[test]
@@ -1301,14 +1391,15 @@ mod tests {
         router.register_resource(Resource::new(ResourceDef::new("/{value}/")));
 
         macro_rules! test_single_value {
-            ($value:expr, $expected:expr) => {
-                {
-                    let req = TestRequest::with_uri($value).finish();
-                    let info = router.recognize(&req, &(), 0);
-                    let req = req.with_route_info(info);
-                    assert_eq!(*Path::<String>::from_request(&req, &PathConfig::default()).unwrap(), $expected);
-                }
-            }
+            ($value:expr, $expected:expr) => {{
+                let req = TestRequest::with_uri($value).finish();
+                let info = router.recognize(&req, &(), 0);
+                let req = req.with_route_info(info);
+                assert_eq!(
+                    *Path::<String>::from_request(&req, &PathConfig::default()).unwrap(),
+                    $expected
+                );
+            }};
         }
 
         test_single_value!("/%25/", "%");
@@ -1317,7 +1408,10 @@ mod tests {
         test_single_value!("/%252B/", "%2B");
         test_single_value!("/%2F/", "/");
         test_single_value!("/%252F/", "%2F");
-        test_single_value!("/http%3A%2F%2Flocalhost%3A80%2Ffoo/", "http://localhost:80/foo");
+        test_single_value!(
+            "/http%3A%2F%2Flocalhost%3A80%2Ffoo/",
+            "http://localhost:80/foo"
+        );
         test_single_value!("/%2Fvar%2Flog%2Fsyslog/", "/var/log/syslog");
         test_single_value!(
             "/http%3A%2F%2Flocalhost%3A80%2Ffile%2F%252Fvar%252Flog%252Fsyslog/",
@@ -1335,7 +1429,8 @@ mod tests {
         assert_eq!(s.key, "%");
         assert_eq!(s.value, 7);
 
-        let s = Path::<(String, String)>::from_request(&req, &PathConfig::default()).unwrap();
+        let s = Path::<(String, String)>::from_request(&req, &PathConfig::default())
+            .unwrap();
         assert_eq!(s.0, "%");
         assert_eq!(s.1, "7");
     }
@@ -1352,7 +1447,8 @@ mod tests {
             *Path::<String>::from_request(
                 &req,
                 &&PathConfig::default().disable_decoding()
-            ).unwrap(),
+            )
+            .unwrap(),
             "%25"
         );
     }

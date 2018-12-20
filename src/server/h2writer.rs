@@ -103,9 +103,11 @@ impl<H: 'static> Writer for H2Writer<H> {
             match *key {
                 // http2 specific
                 CONNECTION | TRANSFER_ENCODING => continue,
-                CONTENT_ENCODING => if encoding != ContentEncoding::Identity {
-                    continue;
-                },
+                CONTENT_ENCODING => {
+                    if encoding != ContentEncoding::Identity {
+                        continue;
+                    }
+                }
                 CONTENT_LENGTH => match info.length {
                     ResponseLength::None => (),
                     ResponseLength::Zero => {

@@ -89,7 +89,7 @@ impl<T: AsyncWrite, H: 'static> H1Writer<T, H> {
                     written += n;
                 }
                 Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
-                    return Ok(written)
+                    return Ok(written);
                 }
                 Err(err) => return Err(err),
             }
@@ -209,9 +209,11 @@ impl<T: AsyncWrite, H: 'static> Writer for H1Writer<T, H> {
             for (key, value) in msg.headers() {
                 match *key {
                     TRANSFER_ENCODING => continue,
-                    CONTENT_ENCODING => if encoding != ContentEncoding::Identity {
-                        continue;
-                    },
+                    CONTENT_ENCODING => {
+                        if encoding != ContentEncoding::Identity {
+                            continue;
+                        }
+                    }
                     CONTENT_LENGTH => match info.length {
                         ResponseLength::None => (),
                         ResponseLength::Zero => {

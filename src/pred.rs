@@ -246,7 +246,8 @@ mod tests {
         let req = TestRequest::with_header(
             header::TRANSFER_ENCODING,
             header::HeaderValue::from_static("chunked"),
-        ).finish();
+        )
+        .finish();
 
         let pred = Header("transfer-encoding", "chunked");
         assert!(pred.check(&req, req.state()));
@@ -264,7 +265,8 @@ mod tests {
             .header(
                 header::HOST,
                 header::HeaderValue::from_static("www.rust-lang.org"),
-            ).finish();
+            )
+            .finish();
 
         let pred = Host("www.rust-lang.org");
         assert!(pred.check(&req, req.state()));

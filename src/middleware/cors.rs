@@ -192,7 +192,8 @@ impl Default for Cors {
                     Method::PUT,
                     Method::PATCH,
                     Method::DELETE,
-                ].into_iter(),
+                ]
+                .into_iter(),
             ),
             headers: AllOrSome::All,
             expose_hdrs: None,
@@ -370,7 +371,8 @@ impl<S> Middleware<S> for Cors {
                             .iter()
                             .fold(String::new(), |s, v| s + "," + v.as_str())
                             .as_str()[1..],
-                    ).unwrap(),
+                    )
+                    .unwrap(),
                 )
             } else if let Some(hdr) =
                 req.headers().get(header::ACCESS_CONTROL_REQUEST_HEADERS)
@@ -387,10 +389,12 @@ impl<S> Middleware<S> for Cors {
                             header::ACCESS_CONTROL_MAX_AGE,
                             format!("{}", max_age).as_str(),
                         );
-                    }).if_some(headers, |headers, resp| {
+                    })
+                    .if_some(headers, |headers, resp| {
                         let _ =
                             resp.header(header::ACCESS_CONTROL_ALLOW_HEADERS, headers);
-                    }).if_true(self.inner.origins.is_all(), |resp| {
+                    })
+                    .if_true(self.inner.origins.is_all(), |resp| {
                         if self.inner.send_wildcard {
                             resp.header(header::ACCESS_CONTROL_ALLOW_ORIGIN, "*");
                         } else {
@@ -400,14 +404,17 @@ impl<S> Middleware<S> for Cors {
                                 origin.clone(),
                             );
                         }
-                    }).if_true(self.inner.origins.is_some(), |resp| {
+                    })
+                    .if_true(self.inner.origins.is_some(), |resp| {
                         resp.header(
                             header::ACCESS_CONTROL_ALLOW_ORIGIN,
                             self.inner.origins_str.as_ref().unwrap().clone(),
                         );
-                    }).if_true(self.inner.supports_credentials, |resp| {
+                    })
+                    .if_true(self.inner.supports_credentials, |resp| {
                         resp.header(header::ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
-                    }).header(
+                    })
+                    .header(
                         header::ACCESS_CONTROL_ALLOW_METHODS,
                         &self
                             .inner
@@ -415,7 +422,8 @@ impl<S> Middleware<S> for Cors {
                             .iter()
                             .fold(String::new(), |s, v| s + "," + v.as_str())
                             .as_str()[1..],
-                    ).finish(),
+                    )
+                    .finish(),
             ))
         } else {
             // Only check requests with a origin header.
@@ -972,7 +980,8 @@ mod tests {
             .header(
                 header::ACCESS_CONTROL_REQUEST_HEADERS,
                 "AUTHORIZATION,ACCEPT",
-            ).method(Method::OPTIONS)
+            )
+            .method(Method::OPTIONS)
             .finish();
 
         let resp = cors.start(&req).unwrap().response();
@@ -1045,11 +1054,10 @@ mod tests {
         let req = TestRequest::default().method(Method::GET).finish();
         let resp: HttpResponse = HttpResponse::Ok().into();
         let resp = cors.response(&req, resp).unwrap().response();
-        assert!(
-            resp.headers()
-                .get(header::ACCESS_CONTROL_ALLOW_ORIGIN)
-                .is_none()
-        );
+        assert!(resp
+            .headers()
+            .get(header::ACCESS_CONTROL_ALLOW_ORIGIN)
+            .is_none());
 
         let req = TestRequest::with_header("Origin", "https://www.example.com")
             .method(Method::OPTIONS)

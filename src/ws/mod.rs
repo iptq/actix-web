@@ -388,7 +388,8 @@ mod tests {
             .header(
                 header::UPGRADE,
                 header::HeaderValue::from_static("websocket"),
-            ).finish();
+            )
+            .finish();
         assert_eq!(
             HandshakeError::NoConnectionUpgrade,
             handshake(&req).err().unwrap()
@@ -398,10 +399,12 @@ mod tests {
             .header(
                 header::UPGRADE,
                 header::HeaderValue::from_static("websocket"),
-            ).header(
+            )
+            .header(
                 header::CONNECTION,
                 header::HeaderValue::from_static("upgrade"),
-            ).finish();
+            )
+            .finish();
         assert_eq!(
             HandshakeError::NoVersionHeader,
             handshake(&req).err().unwrap()
@@ -411,13 +414,16 @@ mod tests {
             .header(
                 header::UPGRADE,
                 header::HeaderValue::from_static("websocket"),
-            ).header(
+            )
+            .header(
                 header::CONNECTION,
                 header::HeaderValue::from_static("upgrade"),
-            ).header(
+            )
+            .header(
                 header::SEC_WEBSOCKET_VERSION,
                 header::HeaderValue::from_static("5"),
-            ).finish();
+            )
+            .finish();
         assert_eq!(
             HandshakeError::UnsupportedVersion,
             handshake(&req).err().unwrap()
@@ -427,13 +433,16 @@ mod tests {
             .header(
                 header::UPGRADE,
                 header::HeaderValue::from_static("websocket"),
-            ).header(
+            )
+            .header(
                 header::CONNECTION,
                 header::HeaderValue::from_static("upgrade"),
-            ).header(
+            )
+            .header(
                 header::SEC_WEBSOCKET_VERSION,
                 header::HeaderValue::from_static("13"),
-            ).finish();
+            )
+            .finish();
         assert_eq!(
             HandshakeError::BadWebsocketKey,
             handshake(&req).err().unwrap()
@@ -443,16 +452,20 @@ mod tests {
             .header(
                 header::UPGRADE,
                 header::HeaderValue::from_static("websocket"),
-            ).header(
+            )
+            .header(
                 header::CONNECTION,
                 header::HeaderValue::from_static("upgrade"),
-            ).header(
+            )
+            .header(
                 header::SEC_WEBSOCKET_VERSION,
                 header::HeaderValue::from_static("13"),
-            ).header(
+            )
+            .header(
                 header::SEC_WEBSOCKET_KEY,
                 header::HeaderValue::from_static("13"),
-            ).finish();
+            )
+            .finish();
         assert_eq!(
             StatusCode::SWITCHING_PROTOCOLS,
             handshake(&req).unwrap().finish().status()

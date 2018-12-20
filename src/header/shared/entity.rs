@@ -198,11 +198,9 @@ mod tests {
     fn test_etag_parse_failures() {
         // Expected failures
         assert!("no-dquotes".parse::<EntityTag>().is_err());
-        assert!(
-            "w/\"the-first-w-is-case-sensitive\""
-                .parse::<EntityTag>()
-                .is_err()
-        );
+        assert!("w/\"the-first-w-is-case-sensitive\""
+            .parse::<EntityTag>()
+            .is_err());
         assert!("".parse::<EntityTag>().is_err());
         assert!("\"unmatched-dquotes1".parse::<EntityTag>().is_err());
         assert!("unmatched-dquotes2\"".parse::<EntityTag>().is_err());

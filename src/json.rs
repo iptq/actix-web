@@ -327,7 +327,8 @@ impl<T: HttpMessage + 'static, U: DeserializeOwned + 'static> Future for JsonBod
                     body.extend_from_slice(&chunk);
                     Ok(body)
                 }
-            }).and_then(|body| Ok(serde_json::from_slice::<U>(&body)?));
+            })
+            .and_then(|body| Ok(serde_json::from_slice::<U>(&body)?));
         self.fut = Some(Box::new(fut));
         self.poll()
     }
@@ -387,7 +388,8 @@ mod tests {
             .header(
                 header::CONTENT_TYPE,
                 header::HeaderValue::from_static("application/text"),
-            ).finish();
+            )
+            .finish();
         let mut json = req.json::<MyObject>();
         assert_eq!(json.poll().err().unwrap(), JsonPayloadError::ContentType);
 
@@ -395,10 +397,12 @@ mod tests {
             .header(
                 header::CONTENT_TYPE,
                 header::HeaderValue::from_static("application/json"),
-            ).header(
+            )
+            .header(
                 header::CONTENT_LENGTH,
                 header::HeaderValue::from_static("10000"),
-            ).finish();
+            )
+            .finish();
         let mut json = req.json::<MyObject>().limit(100);
         assert_eq!(json.poll().err().unwrap(), JsonPayloadError::Overflow);
 
@@ -406,10 +410,12 @@ mod tests {
             .header(
                 header::CONTENT_TYPE,
                 header::HeaderValue::from_static("application/json"),
-            ).header(
+            )
+            .header(
                 header::CONTENT_LENGTH,
                 header::HeaderValue::from_static("16"),
-            ).set_payload(Bytes::from_static(b"{\"name\": \"test\"}"))
+            )
+            .set_payload(Bytes::from_static(b"{\"name\": \"test\"}"))
             .finish();
 
         let mut json = req.json::<MyObject>();
@@ -433,10 +439,12 @@ mod tests {
         let req = TestRequest::with_header(
             header::CONTENT_TYPE,
             header::HeaderValue::from_static("application/json"),
-        ).header(
+        )
+        .header(
             header::CONTENT_LENGTH,
             header::HeaderValue::from_static("16"),
-        ).set_payload(Bytes::from_static(b"{\"name\": \"test\"}"))
+        )
+        .set_payload(Bytes::from_static(b"{\"name\": \"test\"}"))
         .finish();
         assert!(handler.handle(&req).as_err().is_none())
     }

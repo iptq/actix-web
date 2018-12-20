@@ -223,7 +223,8 @@ pub fn from_comma_delimited<T: FromStr>(
                 .filter_map(|x| match x.trim() {
                     "" => None,
                     y => Some(y),
-                }).filter_map(|x| x.trim().parse().ok()),
+                })
+                .filter_map(|x| x.trim().parse().ok()),
         )
     }
     Ok(result)
