@@ -159,34 +159,40 @@ where
     }
 
     fn read_boundary(
-        payload: &mut PayloadBuffer<S>, boundary: &str,
+        payload: &mut PayloadBuffer<S>,
+        boundary: &str,
     ) -> Poll<bool, MultipartError> {
         // TODO: need to read epilogue
-        match payload.readline()? {
+        let mut delimiter = b"\r\n--".to_vec();
+        delimiter.extend_from_slice(boundary.as_bytes());
+        match payload.read_until(&delimiter)? {
             Async::NotReady => Ok(Async::NotReady),
             Async::Ready(None) => Err(MultipartError::Incomplete),
             Async::Ready(Some(chunk)) => {
-                if chunk.len() == boundary.len() + 4
-                    && &chunk[..2] == b"--"
-                    && &chunk[2..boundary.len() + 2] == boundary.as_bytes()
-                {
-                    Ok(Async::Ready(false))
-                } else if chunk.len() == boundary.len() + 6
-                    && &chunk[..2] == b"--"
-                    && &chunk[2..boundary.len() + 2] == boundary.as_bytes()
-                    && &chunk[boundary.len() + 2..boundary.len() + 4] == b"--"
-                {
-                    Ok(Async::Ready(true))
-                } else {
-                    eprintln!("error boundary: {:?}", chunk);
-                    Err(MultipartError::MissingBoundary)
-                }
+                eprintln!("chunk is: {:?}", chunk);
+                Ok(Async::Ready(chunk.starts_with(b"--")))
+                // if chunk.len() == boundary.len() + 4
+                //     && &chunk[..2] == b"--"
+                //     && &chunk[2..boundary.len() + 2] == boundary.as_bytes()
+                // {
+                //     Ok(Async::Ready(false))
+                // } else if chunk.len() == boundary.len() + 6
+                //     && &chunk[..2] == b"--"
+                //     && &chunk[2..boundary.len() + 2] == boundary.as_bytes()
+                //     && &chunk[boundary.len() + 2..boundary.len() + 4] == b"--"
+                // {
+                //     Ok(Async::Ready(true))
+                // } else {
+                //     eprintln!("error boundary: chunk={:?}", chunk);
+                //     Err(MultipartError::MissingBoundary)
+                // }
             }
         }
     }
 
     fn skip_until_boundary(
-        payload: &mut PayloadBuffer<S>, boundary: &str,
+        payload: &mut PayloadBuffer<S>,
+        boundary: &str,
     ) -> Poll<bool, MultipartError> {
         let mut eof = false;
         loop {
@@ -224,13 +230,16 @@ where
     }
 
     fn poll(
-        &mut self, safety: &Safety,
+        &mut self,
+        safety: &Safety,
     ) -> Poll<Option<MultipartItem<S>>, MultipartError> {
+        eprintln!("POLLING: Current state = {:?}", self.state);
         if self.state == InnerState::Eof {
             Ok(Async::Ready(None))
         } else {
             // release field
             loop {
+                eprintln!("LOOPING");
                 // Nested multipart streams of fields has to be consumed
                 // before switching to next
                 if safety.current() {
@@ -298,10 +307,13 @@ where
 
                 // read field headers for next field
                 if self.state == InnerState::Headers {
-                    if let Async::Ready(headers) = InnerMultipart::read_headers(payload)? {
+                    if let Async::Ready(headers) = InnerMultipart::read_headers(payload)?
+                    {
+                        eprintln!("Headers: {:?}", headers);
                         self.state = InnerState::Boundary;
                         headers
                     } else {
+                        eprintln!("aaaaaa");
                         return Ok(Async::NotReady);
                     }
                 } else {
@@ -322,6 +334,7 @@ where
                 }
             }
 
+            eprintln!("reached A, mt = {:?}", mt);
             self.state = InnerState::Boundary;
 
             // nested multipart stream
@@ -334,7 +347,7 @@ where
                         item: InnerMultipartItem::None,
                     }))
                 } else {
-                    eprintln!("error boundary: {:?}", mt);
+                    eprintln!("error boundary2: {:?}", mt);
                     return Err(MultipartError::MissingBoundary);
                 };
 
@@ -346,6 +359,7 @@ where
                     inner: Some(inner),
                 }))))
             } else {
+                eprintln!("reached B");
                 let field = Rc::new(RefCell::new(InnerField::new(
                     self.payload.clone(),
                     self.boundary.clone(),
@@ -384,7 +398,9 @@ where
     S: Stream<Item = Bytes, Error = PayloadError>,
 {
     fn new(
-        safety: Safety, headers: HeaderMap, ct: mime::Mime,
+        safety: Safety,
+        headers: HeaderMap,
+        ct: mime::Mime,
         inner: Rc<RefCell<InnerField<S>>>,
     ) -> Self {
         Field {
@@ -459,7 +475,9 @@ where
     S: Stream<Item = Bytes, Error = PayloadError>,
 {
     fn new(
-        payload: PayloadRef<S>, boundary: String, headers: &HeaderMap,
+        payload: PayloadRef<S>,
+        boundary: String,
+        headers: &HeaderMap,
     ) -> Result<InnerField<S>, PayloadError> {
         let len = if let Some(len) = headers.get(header::CONTENT_LENGTH) {
             if let Ok(s) = len.to_str() {
@@ -487,7 +505,8 @@ where
     /// The body part must has `Content-Length` header with proper value.
     #[allow(dead_code)]
     fn read_len(
-        payload: &mut PayloadBuffer<S>, size: &mut u64,
+        payload: &mut PayloadBuffer<S>,
+        size: &mut u64,
     ) -> Poll<Option<Bytes>, MultipartError> {
         if *size == 0 {
             Ok(Async::Ready(None))
@@ -512,7 +531,8 @@ where
     /// Reads content chunk of body part with unknown length.
     /// The `Content-Length` header for body part is not necessary.
     fn read_stream(
-        payload: &mut PayloadBuffer<S>, boundary: &str,
+        payload: &mut PayloadBuffer<S>,
+        boundary: &str,
     ) -> Poll<Option<Bytes>, MultipartError> {
         let mut delimiter = b"\r\n--".to_vec();
         delimiter.extend_from_slice(boundary.as_bytes());
@@ -539,7 +559,6 @@ where
         //     Async::Ready(Some(mut chunk)) => {
         //         if chunk.len() == 1 {
         //             payload.unprocessed(chunk);
-
 
         //             // what the fuck??
         //             match payload.read_exact(boundary.len() + 4)? {
@@ -757,14 +776,8 @@ mod tests {
                 let (mut sender, payload) = Payload::new(false);
 
                 let bytes = Bytes::from(
-                "testasdadsad
-                 \r\n--abbc761f78ff4d7cb7573b5a23f96ef0\r\n\
-                 Content-Disposition: form-data; name=\"file\"; filename=\"fn.txt\"\r\n\
-                 Content-Type: text/plain; charset=utf-8\r\nContent-Length: 4\r\n\r\n\
-                 test\r\n--abbc761f78ff4d7cb7573b5a23f96ef0\r\n\
-                 Content-Type: text/plain; charset=utf-8\r\nContent-Length: 4\r\n\r\n\
-                 data
-                 \r\n--abbc761f78ff4d7cb7573b5a23f96ef0--\r\n");
+                    "testasdadsad\r\n--abbc761f78ff4d7cb7573b5a23f96ef0\r\nContent-Disposition: form-data; name=\"file\"; filename=\"fn.txt\"\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 4\r\n\r\ntest\r\n--abbc761f78ff4d7cb7573b5a23f96ef0\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 5\r\n\r\ndataa\r\n--abbc761f78ff4d7cb7573b5a23f96ef0--\r\n",
+                );
                 sender.feed_data(bytes);
 
                 let mut multipart = Multipart::new(
@@ -810,7 +823,7 @@ mod tests {
 
                             match field.poll() {
                                 Ok(Async::Ready(Some(chunk))) => {
-                                    assert_eq!(chunk, "data")
+                                    assert_eq!(chunk, "dataa")
                                 }
                                 _ => unreachable!(),
                             }
@@ -821,11 +834,14 @@ mod tests {
                         }
                         _ => unreachable!(),
                     },
-                    _ => unreachable!(),
+                    Ok(Async::Ready(None)) => unreachable!("ready(none)"),
+                    Ok(Async::NotReady) => unreachable!("not ready"),
+                    Err(err) => eprintln!("err: {:?}", err),
                 }
 
                 match multipart.poll() {
                     Ok(Async::Ready(None)) => (),
+                    Err(err) => eprintln!("err2: {:?}", err),
                     _ => unreachable!(),
                 }
 
@@ -841,7 +857,8 @@ mod tests {
             .unwrap()
             .block_on(lazy(|| {
                 let (mut sender, payload) = Payload::new(false);
-                let bytes = Bytes::from("
+                let bytes = Bytes::from(
+                    "
                     This is the preamble area of a multipart message.
                     Mail readers that understand multipart format
                     should ignore this preamble.
@@ -862,8 +879,7 @@ mod tests {
                     but illustrates explicit versus implicit
                     typing of body parts.
                     \r\n--unique-boundary-1\r\n\
-                    Content-Type: multipart/parallel;\r\n\
-                    boundary=unique-boundary-2\r\n\
+                    Content-Type: multipart/parallel; boundary=unique-boundary-2\r\n\
                     \r\n--unique-boundary-2\r\n\
                     Content-Type: audio/basic\r\n\
                     Content-Transfer-Encoding: base64\r\n\
@@ -891,15 +907,12 @@ mod tests {
                     Content-Transfer-Encoding: Quoted-printable
 
                     ... Additional text in ISO-8859-1 goes here ...
-                    \r\n--unique-boundary-1--");
+                    \r\n--unique-boundary-1--",
+                );
                 sender.feed_data(bytes);
 
-                let mut multipart = Multipart::new(
-                    Ok("unique-boundary-1".to_owned()),
-                    payload,
-                );
-
-
+                let mut multipart =
+                    Multipart::new(Ok("unique-boundary-1".to_owned()), payload);
 
                 loop {
                     match multipart.poll() {
@@ -909,7 +922,9 @@ mod tests {
 
                                 loop {
                                     match field.poll() {
-                                        Ok(Async::Ready(Some(chunk))) => eprintln!("data: {:?}", chunk),
+                                        Ok(Async::Ready(Some(chunk))) => {
+                                            eprintln!("data: {:?}", chunk)
+                                        }
                                         Ok(Async::Ready(None)) => break,
                                         _ => unreachable!(),
                                     }
@@ -924,7 +939,6 @@ mod tests {
                 }
 
                 result(Ok::<_, ()>(()))
-            }))
-            .unwrap();
+            })).unwrap();
     }
 }
